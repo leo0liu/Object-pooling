@@ -1,0 +1,125 @@
+<html>
+<head>
+  <title>Evernote Export</title>
+  <basefont face="微软雅黑" size="2" />
+  <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+  <meta name="exporter-version" content="Evernote Windows/303788 (zh-CN, DDL); Windows/6.1.7601 Service Pack 1 (Win64);"/>
+  <style>
+    body, td {
+      font-family: 微软雅黑;
+      font-size: 10pt;
+    }
+  </style>
+</head>
+<body>
+<a name="669"/>
+
+<div>
+<span><div>ok！！！我们废话不多说了，直接奔入正题。</div><div>如题，我们今天就来讲讲在Unity中的缓冲池技术，那好了，在讲一个技术或者说知识点之前, 我们需要带着一些疑问去学习，才会有动力学下去，至少我们这么认为，先知道要干什么，才能知道怎么干。对吧！！！ok，首先我们要知道的是什么是缓冲池技术，其次是我们为什么要使用缓冲此技术，再者是缓冲池技术能运用到哪些地方。明白了这三点，我相信你会对缓冲池技术有一个基本的认知。</div><div><p>那么我们继续，缓冲池，缓冲池，如名字，有没有读者可以联想到什么，没错，就是起到一个缓冲的作用，当然，这个只是通俗的这么说，本质上是减缓CPU运行压力。大个比方：在unity中一个游戏场景中，你的主角是曹操手下的一位弓箭手，正当诸葛亮来草船借箭的时候，曹操一声令下，万箭齐发，好了，当然，作为每一位弓箭手，他一次只发一只弓箭出去，但是，他是连续的发，比如说就连续不断的射出500只弓箭。看到这里，我们一般在unity里的实现方式就是，当按下某个按键的时候，就Instantiate出来一个，即克隆出来一个,然后在某个时间将之Destroy[掉 。这也是最容易想到的方式，但是，就是因为是最容易的,所以才是问题最大的。为什么这么说？请听我一 一道来</p><p>我们知道，Instantiate本质上就是分配一块内存区别，用于存储一个游戏物体对象，那么好了，假如你的游戏场景不大，使用Instantiate也算凑合用，那如果你的游戏场景中不单单一个弓箭手，而有很多，每一个弓箭手又可以发出无限制的弓箭（这个我们平常玩的射击游戏是一样的，比如CF），在此情况下，若还是不断的使用Instantiate克隆，使用Destroy销毁的话，可想而知，CPU运行的压力是有多大，内存在不断的分配与释放,对吧。。。相信，讲到这里，很多读者应该就能明白Instantiate的局限性。那么，问题出现，该如何解决呢？??? 思考一下，来瓶绿叶凉茶。。。。。 嘻嘻~</p><p>ok，那有的读者会不会想，既然不断的 Instantiate不行，那我可不可以先Instantiate一部分，比如10把弓箭，然后循环利用这10把弓箭。。。</p><p>perfect, you are right。最核心的思想就是这样，一句话而已，但是，不要小看这一句话，它包含了很多内容, 提取关键字:”先克隆”,”再循环”.那么，如何做到这两个步骤 我们下面讲，在这之前还得阐述一个问题, 就是:会不会有的读者说 弓箭都射出去了，我还能那的回来麽。哈哈，有这样的想法的读者，看来是已经沉浸在我上边描述的场景当中了，没错，现实中是”开弓没有回头箭”，可是，我们这是游戏，游戏都是骗人的，哈哈，没有黑游戏的意思哦，有接触过游戏的读者就会知道:我们游戏中活泼乱动的主角，有可能仅仅是由一张图片做成，游戏中华丽丽的背景，也可能仅仅是三两张图片的循环拼接而已(2D游戏)，所以想要在游戏中实现”开弓有回头箭”是一件很容易的事情，只需要设置一下游戏物体的position就好了，对吧!!!所以，有的时候，我们不能带着现实中的想法去思考游戏.</p><p>ok，那么我们继续，那么，我们现在就讲讲”先克隆”,”再循环”的实现了，那么，这六个字，其实还藏有玄机，为什么这么说呢，你看，先克隆，那克隆出来的游戏物体需不需要存放在一块内存区域？？？想想，如果不存放，从何而谈循环。所以，是需要一块内存区域来存放”先克隆”出来的游戏物体，再者看，有了存储区域，我们需不需要实现将物体移出该内存区域的方法和将物体放入该内存区域方法？？？再次想想，对于这一点，我个人觉得是可有可无，因为，就犹如上边所说的，我们只需要设置物体的position就可以达到循环使用的目的,所以，我个人使用了两种方式来实现缓冲池,不过，我在这里只提一种也就是比较标准的一种<strong>缓冲池结构</strong>，这也就意味着会包含以上两点，因为，如果没有移出和放入这两个操作，在逻辑上我们显得有点混乱，因为，弓箭是有射出去的，射出去之后在一定的条件下我们又将之拿回来或者说回收回来，所以，我们的代码也应该有”射出”和”回收”。当然，不要这两个操作，功能也能实现，只不过逻辑上比较混乱。OK，这里，再次提到了缓冲池，没错，上边没提概念，到这里来说。</p><p>用通俗的语言表达：缓冲池中的池 就好比是子弹的弹夹，子弹是游戏物体，在游戏开始的时候，弹夹是充满子弹的，子弹发射出去之后，在一定的范围外的时候，再将之回收入弹夹，以便下次再使用。而缓冲只是因为这样的方式减缓了CPU的运算压力而加上的名字，不然，你说单单一个池字，是不是很不好听呀，而且没有那种顾名思义的感觉…对吧~</p><p>ok , 那么，我们接着，既然，需要一块内存区域来存储，那我们用什么来充当这块内存区域呢?选择可以有很种，比如，数组，List &lt; T &gt;泛型集合，栈，或者队列，那,到底是选择哪一种呢? 我这边选择的是队列(Queue)，大家有兴趣的也可以试试其他的，看是否能做的出来，选择队列可以很方便的实现”子弹”的”射出”和“回收”，到底有多方便，待会在代码中实现的时候就可以知道了，现在先买个关子哦!!哈哈哈</p></div><div><br/></div><div>那好了，我们打开<a href="http://lib.csdn.net/base/unity3d" style="color: rgb(223, 52, 52); font-weight: bold;" target="_blank" title="Unity3D知识库">Unity3D</a>，在其中创建一个Cube改名为Player,在添加几盏平行光，以至于整个场景都亮起来，如图</div><div><br/></div><div><img src="Unity中的缓冲池机制2_files/Image.png" type="image/png" style="height: auto;"/></div><div><br/></div><div><br/></div><div>然后，我们创建一个名字为ObjectPool的脚本，主要用于创建一个用于存放子弹的池，并且，拥有两个方法，一个是取得对象方法，一个是回收对象的方法，然后，用如下代码替换掉原本脚本中的代码</div><div><br/></div><div><br/></div><div style="-en-codeblock: true; box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.14902); background-position: initial initial; background-repeat: initial initial;"><div>using UnityEngine;<br/>
+using System.Collections;<br/>
+using System.Collections.Generic;  //包含Queue<br/><br/>
+public class ObjectPool<br/>
+{<br/>
+  private Queue &lt; GameObject &gt;  pool;//声明一个存放GameObject类型的队列对象<br/>
+  private GameObject prefabBullet;//声明子弹游戏物体 用于下边的克隆<br/>
+  private Transform bulletParent; //声明子弹的父物体<br/><br/>
+    //使用构造函数构造对象池<br/>
+  public ObjectPool(GameObject obj, int initialCapacity)<br/>
+  {<br/>
+      prefabBullet = obj;<br/><br/>
+    pool = new Queue&lt;GameObject&gt;(initialCapacity);//实例话一个队列 并制定初始大小<br/>
+    bulletParent = new GameObject(&quot;bulletParent&quot;).transform; //实例化 子弹 父物体 的变换组件<br/><br/>
+    //克隆 initialCapacity个 子弹对象<br/>
+    for (int i = 0; i &lt; initialCapacity; i++)<br/>
+    {<br/>
+      GameObject objClone = GameObject.Instantiate(prefabBullet) as GameObject;<br/>
+      objClone.transform.parent = bulletParent;//为克隆出来的子弹指定父物体<br/>
+      objClone.name = &quot;bulletClone0&quot; + i.ToString();//为克隆出来的子弹取名<br/>
+      objClone.SetActive(false);//将所有克隆出来的子弹 设为不可见<br/>
+      pool.Enqueue(objClone);  //将所有克隆出来的子弹 加入 队列中<br/>
+    }<br/>
+    }<br/><br/>
+  //将对象从 池中 取出<br/>
+  //并设定取出 对象的 位置<br/>
+  public GameObject GetObjFromPool(Vector3 objPosition)<br/>
+  {<br/>
+    GameObject obj = null;<br/><br/>
+    if (pool.Count &gt; 0)//如果 池中存在对象<br/>
+    {<br/>
+      obj = pool.Dequeue();  //Dequeue()方法移除并返回位于 Queue 开始处的对象<br/>
+      //也就是说，依次移除先入队列的元素，并返回该元素<br/>
+      obj.transform.position = objPosition;//给取出的子弹 设置 初始位置<br/>
+    }<br/>
+    //以防万一 如果 池中的子弹都打出去了 还没来得及回收<br/>
+    //扩充池 也就是克隆出一个子弹游戏物体并将之再加入队列<br/>
+    else<br/>
+    {<br/>
+      obj = GameObject.Instantiate(prefabBullet) as GameObject;<br/>
+      obj.transform.parent = bulletParent;<br/>
+      pool.Enqueue(obj);<br/>
+    }<br/><br/>
+    //设为true即为取出<br/>
+    obj.SetActive(true);<br/><br/>
+    return obj;<br/>
+  }<br/><br/>
+  //将对象 回收 入池中<br/>
+  public void Recycle(GameObject obj)<br/>
+  {<br/>
+    obj.SetActive(false);//将需要回收的游戏物体设为不可见(当然 这里指的是子弹游戏物体)<br/>
+    pool.Enqueue(obj);//将该子弹物体加入队列当中<br/>
+  }<br/>
+}</div></div><div><br/></div><div><p>说明:这个脚本是一个单独的类，不需要继承momobehaviour，一旦有该类的对象被实例化的时候，就会调用构造函数，初始化池. 这是C#的语法，这里就不多说了。另外，可以看到我上边说的：“射出”和“回收”很方便，专业术语叫做”出队”和“入队”,仅仅是调用了两个函数:Dequeue()和Enqueue(),就达到了将游戏物体移出内存区域和放入内存区域，那如果我们是使用List&lt; T &gt;集合来做的话，我并没有找到比较好的方法来移出并返回集合中的第一个元素,因此，还得自己添加额外的代码，相对就比较麻烦的了，所以，采用队列来实现。</p></div><div><br/></div><div>那么池有了，如何运用该池呢，游戏开发，逻辑开发是尤为重要的。子弹装入弹夹应该是人为的，什么意思呢？也就是说应该由游戏场景中的Player来控制，所以，我们再次建一个名为PlayerController的c#脚本并将之附加在Player物体上，然后，用如下代码替换掉原本的所有代码</div><div><br/></div><div><br/></div><div><br/></div><div style="-en-codeblock: true; box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.14902); background-position: initial initial; background-repeat: initial initial;"><div>using UnityEngine;<br/>
+using System.Collections;<br/><br/>
+public class PlayerController : MonoBehaviour<br/>
+{<br/>
+  public GameObject prefabBullet; //声明需要 被 克隆 的 物体 在Inspector面板中指定<br/>
+  public int initalCapacity;  //声明 缓冲池 大小 在Inspector面板中指定<br/><br/>
+  public ObjectPool pool; //声明一个 缓冲池 对象<br/><br/>
+  void Start()<br/>
+  {<br/>
+    //实例化ObjectPool对象，并制定需要克隆的游戏物体，包括 缓冲池 的大小<br/>
+    pool = new ObjectPool(prefabBullet, initalCapacity);<br/>
+  }<br/><br/>
+  void Update()<br/>
+  {<br/>
+  //按下J键发射子弹<br/>
+    if (Input.GetKeyUp(KeyCode.J))<br/>
+    {<br/>
+      //取得一个子弹 并指定子弹的位置为当前物体的位置（这里是Player的位置） 因为 该脚本挂接在Player物体上<br/>
+      //这样的话 不管Player移动到哪里 发射子弹的时候 子弹就在哪里<br/><br/>
+      pool.GetObjFromPool(gameObject.transform.position);<br/>
+    }<br/>
+  }<br/>
+}</div></div><div><br/></div><div><p>说明：这个脚本 挂接在Player物体上，可以看到是Player实例化缓冲池并且将池中填满子弹，然而,此时,我们的子弹还没有移动的能力，现在 我们去赋予子弹飞的能力,让子弹飞一会儿吧，什么意思呢？也就是说 我们按下J键的时候，我们仅仅是实现了将第一个入队列的子弹SetActive(true)而且，子弹，还不会有自己的轨迹，所以 我们现在去设置子弹的轨迹，使得实弹一旦被SetActive(true)之后，就自动的发射出去了。</p></div><div><br/></div><div>所以，我们在建立一个名为Bullet的C#脚本，同样 用一下代码替换掉该脚本中的所有代码</div><div><br/></div><div style="-en-codeblock: true; box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.14902); background-position: initial initial; background-repeat: initial initial;"><div>using UnityEngine;<br/>
+using System.Collections;<br/><br/>
+public class Bullet : MonoBehaviour {<br/><br/>
+  public float moveSpeed;  //子弹移动的速度<br/><br/>
+    // Update is called once per frame<br/>
+    void Update ()<br/>
+  {<br/>
+    gameObject.transform.Translate(new Vector3(0,1,0)*Time.deltaTime*moveSpeed);<br/>
+    }<br/><br/>
+}<br/><br/></div></div><div><br/></div><div><br/></div><div>说明：代码着实简单,就不阐述了,就是使得子弹物体向Y轴正向移动。那么,这里要说一下：我的子弹是用一个sphere缩小比例而得到的一个小小球，因为，我主要是讲述实现的方式，所以，没有专门准备素材，所以，嫌弃丑的读者，多担待。。。 那么，我们先整体的先运行一下 试试看有什么效果,如图, 我们得到的效果: 每当按一下J键，发射出去一颗子弹</div><div><br/></div><div><img src="Unity中的缓冲池机制2_files/Image [1].png" type="image/png" style="height: auto;"/> </div><div><br/></div><div>但是 此时 有一个问题 就是 当我们发出的子弹超过10个的时候,可以看到缓冲池被扩充了,也就是执行了ObjectPool类中的GetObjFromPool（）方法中的else部份，也就是当队列中为空的时候，克隆子弹。如图</div><div><img src="Unity中的缓冲池机制2_files/Image [2].png" type="image/png" style="height: auto;"/> </div><div><br/></div><div>那么，也不用慌张，之前，我们不是写过回收的代码的么，就两句，只不过，我们没有使用而已，那么，我们加一个条件，就是，在子弹移出屏幕的时候,我们将之回收入池中,那么，我们只要将Bullet脚本中的代码用一下的代码替换</div><div><br/></div><div><br/></div><div style="-en-codeblock: true; box-sizing: border-box; padding: 8px; font-family: Monaco, Menlo, Consolas, &quot;Courier New&quot;, monospace; font-size: 12px; color: rgb(51, 51, 51); border-top-left-radius: 4px; border-top-right-radius: 4px; border-bottom-right-radius: 4px; border-bottom-left-radius: 4px; background-color: rgb(251, 250, 248); border: 1px solid rgba(0, 0, 0, 0.14902); background-position: initial initial; background-repeat: initial initial;"><div>using UnityEngine;<br/>
+using System.Collections;<br/><br/>
+public class Bullet : MonoBehaviour {<br/><br/>
+  public float moveSpeed; //子弹移动的速度<br/><br/>
+  //声明一个PlayerController的变量 主要用于获取该脚本变量当中的pool对象<br/>
+  private PlayerController playerController;<br/><br/>
+void Start ()<br/>
+  {<br/>
+  playerController =  GameObject.Find(&quot;Player&quot;).player.GetComponent&lt;PlayerController&gt;();<br/><br/>
+    }<br/><br/>
+    // Update is called once per frame<br/>
+    void Update ()<br/>
+  {<br/>
+    gameObject.transform.Translate(new Vector3(0,1,0)*Time.deltaTime*moveSpeed);// 子弹移动<br/><br/>
+    //将子弹的在3D空间的坐标转化为Unity窗口屏幕坐标 左下角为(0,0) 右上脚为(1,1) z轴向可以忽略<br/>
+    Vector3 screenPos = Camera.main.WorldToViewportPoint(gameObject.transform.position);<br/>
+    //如果子弹超出屏幕的范围 将之回收如缓冲池中 实际上就是将之加入队列中<br/>
+    if (screenPos.x &lt; 0f || screenPos.x &gt; 1f || screenPos.y &lt; 0 || screenPos.y &gt; 1)<br/>
+    {<br/>
+      playerController.pool.Recycle(gameObject); <br/>
+    }<br/><br/>
+    }<br/><br/>
+}</div></div><div><br/></div><div><br/></div><div>OK,到此 整个案例也就讲完了，回顾与总结一下:实际上就是先克隆一些子弹出来，比如10个，然后，将这10个子弹物体设为不可见(SetActive(false)), 再然后，将之加入到队列当中，在我们按下J键的时候，我们激活队列中的第一个元素(SetActive(true))同时将之移出队列，然后，在一定条件下(我们这里是当子弹超出屏幕的范围)，我们将该移出的子弹又设为不可见(SetActive(false))同时将之加入队列中。。。。这是缓冲池的实现原理，当然，方式也可以是很多的，我这边呢由于时间有限，也就列举一个出来。。。那么，运用的范围相必，不言而明了吧，最常用的场合就是在反复需要使用Instantiate克隆游戏物体的地方。。。。好了，也该告一段落了！！！</div><div><br/></div><div><a href="http://blog.csdn.net/qq_22393417/article/details/46326781">http://blog.csdn.net/qq_22393417/article/details/46326781</a></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><hr/></div><div><br/></div><div><br/></div><div><span style="color: rgb(250, 122, 0);"><span style="font-size: 21px;">对象池的集合写法(案例,不全)</span></span></div><div><br/></div><div><img src="Unity中的缓冲池机制2_files/0.png" type="image/png"/></div><div><img src="Unity中的缓冲池机制2_files/1.png" type="image/png"/></div><div><img src="Unity中的缓冲池机制2_files/2.png" type="image/png"/></div><div><br/></div><div><img src="Unity中的缓冲池机制2_files/3.png" type="image/png"/></div><div><br/></div><div><br/></div><div>以上写法还是有3个问题:</div><div><br/></div><div>1.预制体需要把内存加载到场景,需要在外部管理它</div><div><br/></div><div>2.刚才只是把暂时不用的,那当前正在使用的,需要额外的代码管理</div><div><br/></div><div>3.需要把放入池子的东西,分好类.再细分一下管理</div><div><br/></div><div><br/></div><div><br/></div><div><img src="Unity中的缓冲池机制2_files/4.png" type="image/png"/></div><div><br/></div><div><br/></div><div>把pllomanager设计成单例,把spawnpool,管理每一个类的池子.有多个类,就多少个 Spawnpool.</div><div><br/></div><div>每一个spawnpool定义为一个empt GameManager</div><div><br/></div><div>每一个prefabpool池子里,只放一个prefeb</div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div><div><br/></div></span>
+</div></body></html> 
